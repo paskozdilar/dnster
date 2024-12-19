@@ -1,0 +1,11 @@
+[Unit]
+Description=Parallel Network Name Resolution
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/dnster -conf /etc/dnster.conf
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
