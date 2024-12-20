@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"time"
@@ -43,6 +44,9 @@ func DNSServer(addr string, upstreamServers []string, cachesize int) error {
 		var query dnsmessage.Message
 		err = query.Unpack(buffer[:n])
 		if err != nil {
+			if DEBUG {
+				log.Println("query unpack error:", err)
+			}
 			continue
 		}
 
@@ -59,6 +63,9 @@ func DNSServer(addr string, upstreamServers []string, cachesize int) error {
 				go func(server string) {
 					resp, err := DNSClient(ctx, server, &query)
 					if err != nil {
+						if DEBUG {
+							log.Println("query", query.ID, "to", server, "error:", err)
+						}
 						errorChan <- err
 						return
 					}
@@ -97,6 +104,9 @@ func DNSServer(addr string, upstreamServers []string, cachesize int) error {
 			}
 
 			if errorCount == len(upstreamServers) {
+				if DEBUG {
+					log.Println("query", query.ID, "all error responses")
+				}
 				response = &dnsmessage.Message{
 					Header: dnsmessage.Header{
 						Response:      true,
@@ -105,6 +115,10 @@ func DNSServer(addr string, upstreamServers []string, cachesize int) error {
 						ID:            query.ID,
 					},
 					Questions: query.Questions,
+				}
+			} else {
+				if DEBUG {
+					log.Println("query", query.ID, "got response:", query.Answers)
 				}
 			}
 
