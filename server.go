@@ -43,13 +43,10 @@ func DNSServer(addr string, upstreamServers []string, cachesize int) error {
 		var query dnsmessage.Message
 		err = query.Unpack(buffer[:n])
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error unpacking DNS query: %v\n", err)
 			continue
 		}
 
-		fmt.Fprintf(os.Stderr, "Received query [%v]: %v\n", query.ID, query.Questions)
-
-		go func(query dnsmessage.Message) {
+		go func() {
 			// Create a context with timeout
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
@@ -79,15 +76,17 @@ func DNSServer(addr string, upstreamServers []string, cachesize int) error {
 				case response = <-responseChan:
 					if len(response.Answers) == 0 {
 						errorCount += 1
+						if errorCount == len(upstreamServers) {
+							cancel()
+							break INNER_LOOP
+						}
 						continue INNER_LOOP
 					}
-					fmt.Fprintf(os.Stderr, "Received response [%v]: %v\n", response.ID, response.Answers)
 					cancel()
 					break INNER_LOOP
 				case <-errorChan:
 					errorCount += 1
 					if errorCount == len(upstreamServers) {
-						fmt.Fprintf(os.Stderr, "All upstream servers failed to respond\n")
 						cancel()
 						return
 					}
@@ -105,6 +104,7 @@ func DNSServer(addr string, upstreamServers []string, cachesize int) error {
 						RCode:         dnsmessage.RCodeServerFailure,
 						ID:            query.ID,
 					},
+					Questions: query.Questions,
 				}
 			}
 
@@ -119,6 +119,6 @@ func DNSServer(addr string, upstreamServers []string, cachesize int) error {
 			if err != nil {
 				return
 			}
-		}(query)
+		}()
 	}
 }
