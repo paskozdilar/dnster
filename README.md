@@ -2,8 +2,6 @@
 
 Aggressively parallel DNS utility, written in Go.
 
-**WARNING: DNSter is still under development and is not ready for use.**
-
 ## Introduction
 
 Many DNS utilities, like `systemd-resolved` support multiple DNS servers, but
